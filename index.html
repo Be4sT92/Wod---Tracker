@@ -203,34 +203,65 @@ async function saveResult(){
  await loadResults();
 }
 
+
+
 async function loadResults(){
+ const list=document.getElementById('results');
+ list.replaceChildren();
+
+ const {data: profiles,error: profilesError}=await db
+  .from('profiles')
+  .select('id, display_name');
+
+ if(profilesError){
+  list.textContent='Errore nel caricamento dei nomi: '+profilesError.message;
+  return;
+ }
+
+ const names={};
+ profiles.forEach(p=>{
+  names[p.id]=p.display_name;
+ });
+
  const {data,error}=await db.from('results')
   .select('*, wods(name)')
   .order('created_at',{ascending:false});
- const list=document.getElementById('results');
- list.replaceChildren();
- if(error){list.textContent=error.message;return}
+
+ if(error){
+  list.textContent=error.message;
+  return;
+ }
+
  data.forEach(r=>{
   const item=document.createElement('div');
   item.className='wod';
+
   const title=document.createElement('strong');
   title.textContent=(r.wods?.name||'WOD')+' · '+r.score_type;
+
   const detail=document.createElement('p');
   detail.className='small';
+
   detail.textContent=[
    r.score_time_seconds!=null?'Tempo: '+r.score_time_seconds+' sec':null,
    r.rounds!=null?'Round: '+r.rounds:null,
    r.reps!=null?'Reps: '+r.reps:null,
    r.weight!=null?'Peso: '+r.weight+' kg':null,
-   'Utente: '+r.user_id.slice(0,8)
+   'Atleta: '+(names[r.user_id]||'Atleta sconosciuto')
   ].filter(Boolean).join(' · ');
+
   const note=document.createElement('p');
   note.textContent=r.notes||'';
+
   item.append(title,detail,note);
   list.appendChild(item);
  });
- if(!data.length)list.textContent='Nessun risultato registrato.';
+
+ if(!data.length){
+  list.textContent='Nessun risultato registrato.';
+ }
 }
+
 
 window.addEventListener('load',()=>{
  const url=localStorage.getItem('wod_url');
