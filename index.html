@@ -1,0 +1,246 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WOD Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#111;color:#f5f5f5;font-family:Arial,sans-serif}
+header{background:#1b1b1b;padding:22px;border-bottom:2px solid #ff7417}
+h1{margin:0;color:#ff7417;letter-spacing:2px}
+main{max-width:700px;margin:auto;padding:18px}
+.card{background:#202020;padding:18px;border-radius:14px;margin:16px 0}
+h2{font-size:19px}
+input,select,textarea{width:100%;padding:13px;margin:7px 0;background:#303030;color:white;border:1px solid #555;border-radius:8px;font-size:15px}
+button{background:#ff7417;color:#111;border:0;padding:13px 18px;border-radius:8px;font-weight:bold;margin:6px 4px 6px 0;font-size:14px}
+button.secondary{background:#444;color:white}
+.small{color:#aaa;font-size:13px}
+.wod{border-bottom:1px solid #444;padding:12px 0}
+.hidden{display:none}
+#status{color:#ffb16e;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<header>
+<h1>WOD TRACKER</h1>
+<p class="small">TRAIN HARD. TRACK PROGRESS.</p>
+</header>
+<main>
+<section id="setup" class="card">
+<h2>Collega il tuo database</h2>
+<p class="small">Inserisci l'indirizzo del progetto Supabase e la Publishable key.</p>
+<input id="url" placeholder="Supabase Project URL">
+<input id="key" placeholder="Supabase Publishable key">
+<button onclick="connect()">Collega Supabase</button>
+</section>
+
+<section id="login" class="card hidden">
+<h2>Accesso</h2>
+<input id="email" type="email" placeholder="La tua email">
+<input id="password" type="password" placeholder="Password">
+<button onclick="login()">Entra</button>
+<p id="loginError" class="small"></p>
+</section>
+
+<section id="app" class="hidden">
+<div class="card">
+<p id="welcome"></p>
+<button class="secondary" onclick="logout()">Esci</button>
+</div>
+
+<div class="card">
+<h2>➕ Crea un WOD</h2>
+<input id="wodName" placeholder="Nome del workout">
+<input id="wodDate" type="date">
+<select id="wodType">
+<option>For Time</option>
+<option>AMRAP</option>
+<option>EMOM</option>
+<option>Strength</option>
+<option>Chipper</option>
+<option>Custom</option>
+</select>
+<textarea id="wodDescription" placeholder="Movimenti, ripetizioni e dettagli"></textarea>
+<button onclick="createWod()">Salva WOD</button>
+</div>
+
+<div class="card">
+<h2>📚 WOD condivisi</h2>
+<div id="wods">Caricamento...</div>
+</div>
+
+<div class="card">
+<h2>🏋️ Registra un risultato</h2>
+<select id="resultWod"></select>
+<select id="scoreType">
+<option value="RX">RX</option>
+<option value="Scaled">Scaled</option>
+</select>
+<input id="time" type="number" min="0" placeholder="Tempo in secondi">
+<input id="rounds" type="number" min="0" step="0.01" placeholder="Round completati">
+<input id="reps" type="number" min="0" placeholder="Ripetizioni">
+<input id="weight" type="number" min="0" step="0.5" placeholder="Peso in kg">
+<textarea id="notes" placeholder="Note personali"></textarea>
+<button onclick="saveResult()">Salva risultato</button>
+</div>
+
+<div class="card">
+<h2>📈 Risultati condivisi</h2>
+<div id="results">Caricamento...</div>
+</div>
+</section>
+<p id="status"></p>
+</main>
+
+<script>
+let db;
+let currentUser;
+
+function connect(){
+ const url=document.getElementById('url').value.trim();
+ const key=document.getElementById('key').value.trim();
+ if(!url||!key){alert('Inserisci entrambi i dati');return}
+ try{
+  db=window.supabase.createClient(url,key);
+  localStorage.setItem('wod_url',url);
+  localStorage.setItem('wod_key',key);
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('login').classList.remove('hidden');
+  checkSession();
+ }catch(e){alert('Controlla URL e chiave')}
+}
+
+async function checkSession(){
+ const {data}=await db.auth.getSession();
+ if(data.session) showApp(data.session.user);
+}
+
+async function login(){
+ const email=document.getElementById('email').value.trim();
+ const password=document.getElementById('password').value;
+ const {data,error}=await db.auth.signInWithPassword({email,password});
+ if(error){document.getElementById('loginError').textContent=error.message;return}
+ showApp(data.user);
+}
+
+async function showApp(user){
+ currentUser=user;
+ document.getElementById('login').classList.add('hidden');
+ document.getElementById('app').classList.remove('hidden');
+ document.getElementById('welcome').textContent='Connesso: '+user.email;
+ await loadWods();
+ await loadResults();
+}
+
+async function logout(){
+ await db.auth.signOut();
+ currentUser=null;
+ document.getElementById('app').classList.add('hidden');
+ document.getElementById('login').classList.remove('hidden');
+}
+
+async function createWod(){
+ const name=document.getElementById('wodName').value.trim();
+ if(!name){alert('Inserisci il nome del WOD');return}
+ const {error}=await db.from('wods').insert({
+  name,
+  workout_date:document.getElementById('wodDate').value||new Date().toISOString().slice(0,10),
+  wod_type:document.getElementById('wodType').value,
+  description:document.getElementById('wodDescription').value,
+  created_by:currentUser.id
+ });
+ if(error){alert(error.message);return}
+ document.getElementById('wodName').value='';
+ document.getElementById('wodDescription').value='';
+ await loadWods();
+ alert('WOD salvato!');
+}
+
+async function loadWods(){
+ const {data,error}=await db.from('wods').select('*').order('workout_date',{ascending:false});
+ if(error){document.getElementById('wods').textContent=error.message;return}
+ const list=document.getElementById('wods');
+ const select=document.getElementById('resultWod');
+ list.replaceChildren();
+ select.replaceChildren();
+ data.forEach(w=>{
+  const option=document.createElement('option');
+  option.value=w.id;option.textContent=w.name+' - '+w.workout_date;
+  select.appendChild(option);
+  const item=document.createElement('div');
+  item.className='wod';
+  const title=document.createElement('strong');
+  title.textContent=w.name+' · '+w.wod_type;
+  const detail=document.createElement('p');
+  detail.className='small';
+  detail.textContent=w.workout_date+' — '+(w.description||'Nessuna descrizione');
+  item.append(title,detail);
+  list.appendChild(item);
+ });
+ if(!data.length)list.textContent='Ancora nessun WOD. Creane uno!';
+}
+
+async function saveResult(){
+ const wodId=document.getElementById('resultWod').value;
+ if(!wodId){alert('Prima crea o seleziona un WOD');return}
+ const number=id=>document.getElementById(id).value===''?null:Number(document.getElementById(id).value);
+ const {error}=await db.from('results').insert({
+  wod_id:wodId,
+  user_id:currentUser.id,
+  score_type:document.getElementById('scoreType').value,
+  score_time_seconds:number('time'),
+  rounds:number('rounds'),
+  reps:number('reps'),
+  weight:number('weight'),
+  notes:document.getElementById('notes').value
+ });
+ if(error){alert(error.message);return}
+ document.getElementById('notes').value='';
+ alert('Risultato salvato!');
+ await loadResults();
+}
+
+async function loadResults(){
+ const {data,error}=await db.from('results')
+  .select('*, wods(name)')
+  .order('created_at',{ascending:false});
+ const list=document.getElementById('results');
+ list.replaceChildren();
+ if(error){list.textContent=error.message;return}
+ data.forEach(r=>{
+  const item=document.createElement('div');
+  item.className='wod';
+  const title=document.createElement('strong');
+  title.textContent=(r.wods?.name||'WOD')+' · '+r.score_type;
+  const detail=document.createElement('p');
+  detail.className='small';
+  detail.textContent=[
+   r.score_time_seconds!=null?'Tempo: '+r.score_time_seconds+' sec':null,
+   r.rounds!=null?'Round: '+r.rounds:null,
+   r.reps!=null?'Reps: '+r.reps:null,
+   r.weight!=null?'Peso: '+r.weight+' kg':null,
+   'Utente: '+r.user_id.slice(0,8)
+  ].filter(Boolean).join(' · ');
+  const note=document.createElement('p');
+  note.textContent=r.notes||'';
+  item.append(title,detail,note);
+  list.appendChild(item);
+ });
+ if(!data.length)list.textContent='Nessun risultato registrato.';
+}
+
+window.addEventListener('load',()=>{
+ const url=localStorage.getItem('wod_url');
+ const key=localStorage.getItem('wod_key');
+ if(url&&key){
+  document.getElementById('url').value=url;
+  document.getElementById('key').value=key;
+  connect();
+ }
+});
+</script>
+</body>
+</html>
