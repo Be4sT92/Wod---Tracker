@@ -205,6 +205,7 @@ async function saveResult(){
 
 
 
+
 async function loadResults(){
  const list=document.getElementById('results');
  list.replaceChildren();
@@ -214,14 +215,12 @@ async function loadResults(){
   .select('id, display_name');
 
  if(profilesError){
-  list.textContent='Errore nel caricamento dei nomi: '+profilesError.message;
+  list.textContent='Errore nomi: '+profilesError.message;
   return;
  }
 
  const names={};
- profiles.forEach(p=>{
-  names[p.id]=p.display_name;
- });
+ profiles.forEach(p=>names[p.id]=p.display_name);
 
  const {data,error}=await db.from('results')
   .select('*, wods(name)')
@@ -241,7 +240,6 @@ async function loadResults(){
 
   const detail=document.createElement('p');
   detail.className='small';
-
   detail.textContent=[
    r.score_time_seconds!=null?'Tempo: '+r.score_time_seconds+' sec':null,
    r.rounds!=null?'Round: '+r.rounds:null,
@@ -254,6 +252,20 @@ async function loadResults(){
   note.textContent=r.notes||'';
 
   item.append(title,detail,note);
+
+  if(r.user_id===currentUser.id){
+   const editButton=document.createElement('button');
+   editButton.textContent='Modifica';
+   editButton.onclick=()=>editResult(r);
+
+   const deleteButton=document.createElement('button');
+   deleteButton.textContent='Elimina';
+   deleteButton.className='secondary';
+   deleteButton.onclick=()=>deleteResult(r.id);
+
+   item.append(editButton,deleteButton);
+  }
+
   list.appendChild(item);
  });
 
@@ -261,6 +273,74 @@ async function loadResults(){
   list.textContent='Nessun risultato registrato.';
  }
 }
+
+async function editResult(r){
+ const time=prompt('Tempo in secondi:',r.score_time_seconds??'');
+ if(time===null)return;
+
+ const rounds=prompt('Round completati:',r.rounds??'');
+ if(rounds===null)return;
+
+ const reps=prompt('Ripetizioni:',r.reps??'');
+ if(reps===null)return;
+
+ const weight=prompt('Peso in kg:',r.weight??'');
+ if(weight===null)return;
+
+ const scoreType=prompt('Tipo risultato: RX oppure Scaled',r.score_type);
+ if(scoreType===null)return;
+
+ if(!['RX','Scaled'].includes(scoreType.trim())){
+  alert('Inserisci RX oppure Scaled');
+  return;
+ }
+
+ const notes=prompt('Note:',r.notes||'');
+ if(notes===null)return;
+
+ const number=v=>v.trim()===''?null:Number(v);
+
+ const values=[time,rounds,reps,weight];
+ if(values.some(v=>v.trim()!=='' && (!Number.isFinite(Number(v))||Number(v)<0))){
+  alert('Inserisci soltanto numeri validi e non negativi.');
+  return;
+ }
+
+ const {error}=await db.from('results').update({
+  score_time_seconds:number(time),
+  rounds:number(rounds),
+  reps:number(reps),
+  weight:number(weight),
+  score_type:scoreType.trim(),
+  notes
+ }).eq('id',r.id).eq('user_id',currentUser.id);
+
+ if(error){
+  alert('Errore: '+error.message);
+  return;
+ }
+
+ alert('Risultato aggiornato!');
+ await loadResults();
+}
+
+async function deleteResult(id){
+ if(!confirm('Vuoi davvero eliminare questo risultato?'))return;
+
+ const {error}=await db.from('results')
+  .delete()
+  .eq('id',id)
+  .eq('user_id',currentUser.id);
+
+ if(error){
+  alert('Errore: '+error.message);
+  return;
+ }
+
+ alert('Risultato eliminato!');
+ await loadResults();
+}
+
 
 
 window.addEventListener('load',()=>{
