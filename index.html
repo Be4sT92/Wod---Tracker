@@ -8,19 +8,31 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#111;color:#f5f5f5;font-family:Arial,sans-serif}
-header{background:#1b1b1b;padding:22px;border-bottom:2px solid #ff7417}
-h1{margin:0;color:#ff7417;letter-spacing:2px}
-main{max-width:700px;margin:auto;padding:18px}
-.card{background:#202020;padding:18px;border-radius:14px;margin:16px 0}
+body{margin:0;background:#090911;color:#f7f5ff;font-family:Arial,sans-serif}
+header{background:#10101b;padding:22px;border-bottom:2px solid #8b35ff;box-shadow:0 4px 22px #4b16a533}
+h1{margin:0;color:#fff;letter-spacing:2px}
+header h1 span{color:#9b42ff}
+header .small{color:#bca6e9}
+main{max-width:760px;margin:auto;padding:18px}
+.card{background:#171426;padding:18px;border:1px solid #30234d;border-radius:16px;margin:16px 0}
 h2{font-size:19px}
-input,select,textarea{width:100%;padding:13px;margin:7px 0;background:#303030;color:white;border:1px solid #555;border-radius:8px;font-size:15px}
-button{background:#ff7417;color:#111;border:0;padding:13px 18px;border-radius:8px;font-weight:bold;margin:6px 4px 6px 0;font-size:14px}
-button.secondary{background:#444;color:white}
+input,select,textarea{width:100%;padding:13px;margin:7px 0;background:#242238;color:white;border:1px solid #51456c;border-radius:8px;font-size:15px}
+button{background:#8538e8;color:white;border:0;padding:13px 18px;border-radius:8px;font-weight:bold;margin:6px 4px 6px 0;font-size:14px}
+button.secondary{background:#403b52;color:white}
 .small{color:#aaa;font-size:13px}
-.wod{border-bottom:1px solid #444;padding:12px 0}
+.wod{border-bottom:1px solid #403653;padding:12px 0}
 .hidden{display:none}
-#status{color:#ffb16e;white-space:pre-wrap}
+#status{color:#c6a3ff;white-space:pre-wrap}
+.dashboard-title{margin:8px 0 14px;color:#d9c5ff;letter-spacing:1px}
+.dashboard-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.stat-circle{aspect-ratio:1/1;border:4px solid #168bff;border-radius:50%;background:radial-gradient(circle at 50% 45%,#28143f 0%,#170e29 72%);box-shadow:0 0 12px #168bff88,inset 0 0 22px #6e28aa33;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:12px;min-width:0}
+.stat-icon{height:76px;width:76px;margin-bottom:5px;display:flex;align-items:center;justify-content:center}
+.stat-icon svg{width:100%;height:100%}
+.stat-number{font-size:clamp(36px,9vw,58px);line-height:1;font-weight:800;color:#fff}
+.stat-label{font-size:clamp(15px,3.8vw,22px);font-weight:700;color:#d6baff;margin-top:7px}
+.stat-sub{font-size:clamp(12px,3vw,17px);font-weight:700;color:#b78cff;margin-top:7px}
+.dashboard-footer{text-align:center;color:#a65cff;letter-spacing:3px;font-size:12px;font-weight:bold;margin:20px 0 4px}
+@media(max-width:360px){.dashboard-grid{gap:9px}.stat-circle{border-width:3px;padding:7px}.stat-icon{width:58px;height:58px}}
 </style>
 </head>
 <body>
@@ -50,6 +62,70 @@ button.secondary{background:#444;color:white}
 <p id="welcome"></p>
 <button class="secondary" onclick="logout()">Esci</button>
 </div>
+
+<section class="card" id="dashboard">
+<h2 class="dashboard-title">LA TUA DASHBOARD</h2>
+
+<div class="dashboard-grid">
+
+<div class="stat-circle">
+<div class="stat-icon">
+<svg viewBox="0 0 100 100" fill="#55565e">
+<rect x="7" y="38" width="13" height="24" rx="4"/>
+<rect x="22" y="25" width="15" height="50" rx="5"/>
+<path d="M37 44H63V56H37Z"/>
+<rect x="63" y="25" width="15" height="50" rx="5"/>
+<rect x="80" y="38" width="13" height="24" rx="4"/>
+</svg>
+</div>
+<div class="stat-number" id="statWods">—</div>
+<div class="stat-label">Allenamenti</div>
+</div>
+
+<div class="stat-circle">
+<div class="stat-icon">
+<svg viewBox="0 0 100 100" fill="#ffd700" stroke="#d99b00" stroke-width="3">
+<path d="M24 17H76V29C76 49 65 62 50 66C35 62 24 49 24 29Z"/>
+<path d="M24 24H11V35C11 48 20 55 31 56L35 47C26 44 22 38 24 31Z"/>
+<path d="M76 24H89V35C89 48 80 55 69 56L65 47C74 44 78 38 76 31Z"/>
+<path d="M45 65H55V79H45Z"/>
+<path d="M36 80H64V87H36Z"/>
+<path d="M29 88H71V94H29Z"/>
+</svg>
+</div>
+<div class="stat-number" id="statResults">—</div>
+<div class="stat-label">Risultati</div>
+</div>
+
+<div class="stat-circle">
+<div class="stat-icon">
+<svg viewBox="0 0 100 100" fill="#fff">
+<circle cx="50" cy="27" r="19"/>
+<path d="M18 88V78C18 60 31 49 50 49S82 60 82 78V88Z"/>
+</svg>
+</div>
+<div class="stat-label">Andrea</div>
+<div class="stat-sub" id="statAndrea">— WOD</div>
+</div>
+
+<div class="stat-circle">
+<div class="stat-icon">
+<svg viewBox="0 0 100 100" fill="#fff">
+<path d="M68 7C83 7 91 20 88 38C86 51 80 60 71 65L64 57C73 49 76 38 73 28C70 19 63 16 57 19C59 11 63 7 68 7Z"/>
+<circle cx="43" cy="35" r="21"/>
+<path d="M10 91V82C10 64 23 53 43 53S76 64 76 82V91Z"/>
+<path d="M24 21C30 7 52 7 63 20C56 20 51 25 44 26C36 27 31 23 27 19Z"/>
+</svg>
+</div>
+<div class="stat-label">Ludovica</div>
+<div class="stat-sub" id="statLudovica">— WOD</div>
+</div>
+
+</div>
+
+<div class="dashboard-footer">TRAIN HARD • TRACK MORE</div>
+<p id="dashboardError" class="small"></p>
+</section>
 
 <div class="card">
 <h2>➕ Crea un WOD</h2>
@@ -126,6 +202,7 @@ async function login(){
  showApp(data.user);
 }
 
+
 async function showApp(user){
  currentUser=user;
  document.getElementById('login').classList.add('hidden');
@@ -133,7 +210,9 @@ async function showApp(user){
  document.getElementById('welcome').textContent='Connesso: '+user.email;
  await loadWods();
  await loadResults();
+ await loadDashboard();
 }
+
 
 async function logout(){
  await db.auth.signOut();
@@ -156,9 +235,9 @@ async function createWod(){
  document.getElementById('wodName').value='';
  document.getElementById('wodDescription').value='';
  await loadWods();
- alert('WOD salvato!');
+await loadDashboard();
+alert('WOD salvato!');
 }
-
 async function loadWods(){
  const {data,error}=await db.from('wods').select('*').order('workout_date',{ascending:false});
  if(error){document.getElementById('wods').textContent=error.message;return}
@@ -199,12 +278,61 @@ async function saveResult(){
  });
  if(error){alert(error.message);return}
  document.getElementById('notes').value='';
- alert('Risultato salvato!');
- await loadResults();
+ 
+alert('Risultato salvato!');
+await loadResults();
+await loadDashboard();
 }
 
 
 
+
+async function loadDashboard(){
+ const errorBox=document.getElementById('dashboardError');
+ errorBox.textContent='';
+
+ const [wodsResponse,resultsResponse,profilesResponse]=await Promise.all([
+  db.from('wods').select('id',{count:'exact',head:true}),
+  db.from('results').select('user_id,wod_id'),
+  db.from('profiles').select('id,display_name')
+ ]);
+
+ if(wodsResponse.error||resultsResponse.error||profilesResponse.error){
+  errorBox.textContent='Errore statistiche: '+(
+   wodsResponse.error||resultsResponse.error||profilesResponse.error
+  ).message;
+  return;
+ }
+
+ const results=resultsResponse.data||[];
+ const profiles=profilesResponse.data||[];
+
+ const idsByName={};
+ profiles.forEach(p=>{
+  idsByName[p.display_name.trim().toLowerCase()]=p.id;
+ });
+
+ const uniqueWodsByUser={};
+
+ results.forEach(r=>{
+  if(!uniqueWodsByUser[r.user_id]){
+   uniqueWodsByUser[r.user_id]=new Set();
+  }
+  uniqueWodsByUser[r.user_id].add(r.wod_id);
+ });
+
+ document.getElementById('statWods').textContent=
+  wodsResponse.count??0;
+
+ document.getElementById('statResults').textContent=
+  results.length;
+
+ document.getElementById('statAndrea').textContent=
+  (uniqueWodsByUser[idsByName['andrea']]?.size??0)+' WOD';
+
+ document.getElementById('statLudovica').textContent=
+  (uniqueWodsByUser[idsByName['ludovica']]?.size??0)+' WOD';
+}
 
 async function loadResults(){
  const list=document.getElementById('results');
@@ -321,9 +449,9 @@ async function editResult(r){
  }
 
  alert('Risultato aggiornato!');
- await loadResults();
+await loadResults();
+await loadDashboard();
 }
-
 async function deleteResult(id){
  if(!confirm('Vuoi davvero eliminare questo risultato?'))return;
 
@@ -337,10 +465,12 @@ async function deleteResult(id){
   return;
  }
 
- alert('Risultato eliminato!');
- await loadResults();
-}
+ 
+alert('Risultato eliminato!');
+await loadResults();
+await loadDashboard();
 
+}
 
 
 window.addEventListener('load',()=>{
